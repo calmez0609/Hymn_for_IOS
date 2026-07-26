@@ -57,17 +57,8 @@ export function App() {
         ))}
       </div>
 
-      {/* Header Tab Bar */}
-      <HeaderTabBar 
-        activeTab={activeTab} 
-        onTabChange={(index) => {
-          setActiveTab(index);
-          setActiveHymn(null);
-        }} 
-      />
-
       {/* Main Tab Screens */}
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 min-h-0 overflow-hidden relative">
         {activeTab === 0 && (
           <HomeScreen
             onConfirm={(category, number) => findAndOpenHymn(category, number)}
@@ -103,6 +94,15 @@ export function App() {
           onClose={() => setActiveHymn(null)}
         />
       </div>
+
+      {/* Bottom Tab Bar (renamed HeaderTabBar) */}
+      <HeaderTabBar 
+        activeTab={activeTab} 
+        onTabChange={(index) => {
+          setActiveTab(index);
+          setActiveHymn(null);
+        }} 
+      />
     </IosDeviceWrapper>
   );
 }

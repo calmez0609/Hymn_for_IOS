@@ -15,8 +15,8 @@ export const HeaderTabBar: React.FC<HeaderTabBarProps> = ({ activeTab, onTabChan
   ];
 
   return (
-    <div className="w-full bg-[#009688] text-white shadow-md select-none shrink-0">
-      <div className="flex items-center justify-around h-14 px-1">
+    <div className="w-full bg-[#009688] text-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] select-none shrink-0 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex items-center justify-around h-14 sm:h-16 px-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -25,14 +25,11 @@ export const HeaderTabBar: React.FC<HeaderTabBarProps> = ({ activeTab, onTabChan
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={`flex flex-col items-center justify-center flex-1 h-full transition-all relative ${
-                isActive ? 'text-white font-medium' : 'text-teal-100/70 hover:text-white'
+                isActive ? 'text-white font-semibold' : 'text-teal-100/70 hover:text-white'
               }`}
             >
-              <Icon className={`w-5 h-5 mb-0.5 transition-transform ${isActive ? 'scale-110' : ''}`} />
-              <span className="text-[11px] leading-none">{tab.label}</span>
-              {isActive && (
-                <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-t-full shadow" />
-              )}
+              <Icon className={`w-5 h-5 sm:w-6 sm:h-6 mb-0.5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+              <span className="text-[10px] sm:text-xs leading-none">{tab.label}</span>
             </button>
           );
         })}
