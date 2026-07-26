@@ -8,6 +8,32 @@ import { SettingsScreen } from './presentation/screens/SettingsScreen';
 import { HymnDetailModal } from './presentation/components/HymnDetailModal';
 import { getCategoryText } from './domain/entities/Hymn';
 
+function legacyCopyText(text: string): boolean {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '0';
+  textarea.style.opacity = '0';
+  textarea.style.pointerEvents = 'none';
+
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch {
+    copied = false;
+  }
+
+  document.body.removeChild(textarea);
+  return copied;
+}
+
 export function App() {
   const {
     activeTab,
@@ -49,21 +75,26 @@ export function App() {
         });
         return;
       }
-
-      await navigator.clipboard.writeText(shareText);
-      showToast('已複製詩歌內容，可以貼到聊天軟體分享', 'success');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return;
       }
-
-      try {
-        await navigator.clipboard.writeText(shareText);
-        showToast('已複製詩歌內容，可以貼到聊天軟體分享', 'success');
-      } catch {
-        showToast('目前無法分享，請稍後再試', 'error');
-      }
     }
+
+    try {
+      await navigator.clipboard.writeText(shareText);
+      showToast('已複製詩歌內容，可以貼到聊天軟體分享', 'success');
+      return;
+    } catch {
+      // continue to legacy fallback
+    }
+
+    if (legacyCopyText(shareText)) {
+      showToast('已複製詩歌內容，可以貼到聊天軟體分享', 'success');
+      return;
+    }
+
+    showToast('這台 iPhone 目前擋住分享與複製，請改用 Safari 開啟後再試', 'error');
   };
 
   const handleTabChange = (index: number) => {
