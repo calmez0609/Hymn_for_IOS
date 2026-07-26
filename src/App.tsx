@@ -8,32 +8,6 @@ import { SettingsScreen } from './presentation/screens/SettingsScreen';
 import { HymnDetailModal } from './presentation/components/HymnDetailModal';
 import { getCategoryText } from './domain/entities/Hymn';
 
-function legacyCopyText(text: string): boolean {
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.top = '0';
-  textarea.style.left = '0';
-  textarea.style.opacity = '0';
-  textarea.style.pointerEvents = 'none';
-
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  textarea.setSelectionRange(0, textarea.value.length);
-
-  let copied = false;
-  try {
-    copied = document.execCommand('copy');
-  } catch {
-    copied = false;
-  }
-
-  document.body.removeChild(textarea);
-  return copied;
-}
-
 export function App() {
   const {
     activeTab,
@@ -65,36 +39,34 @@ export function App() {
 
     const categoryText = getCategoryText(activeHymn.bookId);
     const shareTitle = `(${categoryText})${activeHymn.number} - ${activeHymn.title}`;
+    const shareUrl = window.location.href;
     const shareText = `${shareTitle}\n\n${activeHymn.body}`;
+    const shareData = {
+      title: shareTitle,
+      text: shareText,
+      url: shareUrl,
+    };
+
+    if (!navigator.share) {
+      showToast('目前這個開啟方式不支援 iOS 原生分享，請用 Safari 開啟', 'error');
+      return;
+    }
 
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-        });
+      if (navigator.canShare && !navigator.canShare(shareData)) {
+        showToast('目前這個頁面無法叫出 iOS 原生分享，請改用 Safari 開啟', 'error');
         return;
       }
+
+      await navigator.share(shareData);
+      showToast('已開啟 iOS 分享選單', 'info');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return;
       }
-    }
 
-    try {
-      await navigator.clipboard.writeText(shareText);
-      showToast('已複製詩歌內容，可以貼到聊天軟體分享', 'success');
-      return;
-    } catch {
-      // continue to legacy fallback
+      showToast('目前無法叫出 iOS 原生分享，請確認是在 Safari 裡開啟', 'error');
     }
-
-    if (legacyCopyText(shareText)) {
-      showToast('已複製詩歌內容，可以貼到聊天軟體分享', 'success');
-      return;
-    }
-
-    showToast('這台 iPhone 目前擋住分享與複製，請改用 Safari 開啟後再試', 'error');
   };
 
   const handleTabChange = (index: number) => {
