@@ -9,6 +9,7 @@ import { HistoryScreen } from './presentation/screens/HistoryScreen';
 import { SettingsScreen } from './presentation/screens/SettingsScreen';
 import { HymnDetailModal } from './presentation/components/HymnDetailModal';
 import { getCategoryText } from './domain/entities/Hymn';
+import { formatSchedulePlanDateTime } from './domain/entities/SchedulePlan';
 
 const PICKER_TAB_INDEX = 1;
 const SEARCH_TAB_INDEX = 2;
@@ -43,10 +44,17 @@ export function App() {
     clearHistory,
     addSchedulePlan,
     deleteSchedulePlan,
+    setPrimarySchedulePlan,
     clearExpiredSchedulePlans,
     addHymnToSchedulePlan,
+    addExistingHymnToSchedulePlan,
     removeHymnFromSchedulePlan,
     moveSchedulePlanItem,
+    getSchedulePlanShareData,
+    shareSchedulePlan,
+    pendingImportedPlan,
+    dismissPendingImportedPlan,
+    confirmImportSharedPlan,
   } = useHymnApp();
 
   const handleShareHymn = async () => {
@@ -168,6 +176,7 @@ export function App() {
             plans={schedulePlans}
             onAddPlan={addSchedulePlan}
             onDeletePlan={deleteSchedulePlan}
+            onSetPrimaryPlan={setPrimarySchedulePlan}
             onClearExpiredPlans={clearExpiredSchedulePlans}
             onSelectHymn={(bookId, number) => {
               void openHymnByNumber(bookId, number);
@@ -175,6 +184,8 @@ export function App() {
             onAddHymn={addHymnToSchedulePlan}
             onRemoveHymn={removeHymnFromSchedulePlan}
             onMoveItem={moveSchedulePlanItem}
+            onSharePlan={shareSchedulePlan}
+            getShareData={getSchedulePlanShareData}
           />
         )}
         {activeTab === HISTORY_TAB_INDEX && (
@@ -204,7 +215,49 @@ export function App() {
           }
           onShare={handleShareHymn}
           onClose={() => closeActiveHymn({ clearRemembered: true })}
+          schedulePlans={schedulePlans}
+          onAddHymnToPlan={addHymnToSchedulePlan}
+          onAddExistingHymnToPlan={addExistingHymnToSchedulePlan}
         />
+
+        {pendingImportedPlan && (
+          <div className="overlay-modal-backdrop">
+            <div className="overlay-modal-card overlay-modal-card--wide">
+              <h3 className="h5 fw-bold text-dark mb-2">匯入分享行程</h3>
+              <p className="small text-secondary mb-3">
+                這個連結包含一個可匯入的行程。確認後會加入你的行程分頁，同一個 UUID 不會重複匯入。
+              </p>
+
+              <div className="schedule-export-block">
+                <div className="fw-semibold text-dark">{pendingImportedPlan.name}</div>
+                <div className="small text-secondary mt-1">
+                  時間：{formatSchedulePlanDateTime(pendingImportedPlan.scheduledAt)} ・ {pendingImportedPlan.items.length} 首
+                </div>
+
+                <div className="d-flex flex-column gap-2 mt-3">
+                  {pendingImportedPlan.items.length === 0 ? (
+                    <div className="small text-secondary">這個分享行程目前沒有詩歌。</div>
+                  ) : (
+                    pendingImportedPlan.items.map((item, index) => (
+                      <div key={item.id} className="small text-dark">
+                        {index + 1}. ({getCategoryText(item.bookId)}){item.number} - {item.title}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="d-flex justify-content-end gap-2 mt-4">
+                <button type="button" className="btn btn-outline-secondary" onClick={dismissPendingImportedPlan}>
+                  取消
+                </button>
+                <button type="button" className="btn btn-success" onClick={confirmImportSharedPlan}>
+                  匯入
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <HeaderTabBar

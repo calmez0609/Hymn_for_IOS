@@ -25,6 +25,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const todayPlans = plans.filter((plan) => isPlanToday(plan));
   const upcomingPlans = todayPlans.filter((plan) => !isPlanExpired(plan));
   const pastPlans = todayPlans.filter((plan) => isPlanExpired(plan));
+  const primaryPlan = plans.find((plan) => plan.isPrimary);
 
   return (
     <div className="screen-root overflow-auto p-4 p-sm-4 pt-4 pt-sm-5">
@@ -54,6 +55,30 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </button>
           </div>
         </div>
+
+        {primaryPlan && (
+          <section className="screen-panel p-4 d-flex flex-column gap-3">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <div className="small text-success fw-semibold mb-1">主行程</div>
+                <div className="fw-semibold text-dark">{primaryPlan.name}</div>
+              </div>
+              <span className="small text-success fw-semibold">{primaryPlan.items.length} 首</span>
+            </div>
+            {primaryPlan.items.length === 0 ? (
+              <div className="small text-secondary">這個主行程還沒有加入詩歌。</div>
+            ) : (
+              <div className="d-flex flex-column gap-2">
+                {primaryPlan.items.map((item) => (
+                  <button key={item.id} type="button" onClick={() => onSelectHymn(item.bookId, item.number)} className="dashboard-hymn-button text-start">
+                    <Music4 size={16} className="text-success flex-shrink-0" />
+                    <span className="small fw-medium text-dark">({getCategoryText(item.bookId)}){item.number} - {item.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {todayPlans.length === 0 ? (
           <div className="screen-panel p-4 text-center">

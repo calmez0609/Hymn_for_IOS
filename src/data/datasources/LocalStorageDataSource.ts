@@ -8,6 +8,7 @@ const SETTINGS_KEY = 'hymn_app_settings';
 const HOME_DRAFT_KEY = 'hymn_home_draft';
 const HOME_ACTIVE_HYMN_KEY = 'hymn_home_active_hymn';
 const SCHEDULE_PLANS_KEY = 'hymn_schedule_plans';
+const IMPORTED_SCHEDULE_UUIDS_KEY = 'hymn_imported_schedule_uuids';
 
 export interface RememberedHymnState {
   hymn: Hymn;
@@ -112,6 +113,23 @@ export class LocalStorageDataSource {
       localStorage.setItem(SCHEDULE_PLANS_KEY, JSON.stringify(plans));
     } catch (e) {
       console.error('Failed to save schedule plans:', e);
+    }
+  }
+
+  getImportedScheduleUuids(): string[] {
+    try {
+      const data = localStorage.getItem(IMPORTED_SCHEDULE_UUIDS_KEY);
+      return data ? JSON.parse(data) as string[] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveImportedScheduleUuids(uuids: string[]): void {
+    try {
+      localStorage.setItem(IMPORTED_SCHEDULE_UUIDS_KEY, JSON.stringify(uuids));
+    } catch (e) {
+      console.error('Failed to save imported schedule uuids:', e);
     }
   }
 }

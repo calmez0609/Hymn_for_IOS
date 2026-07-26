@@ -385,8 +385,8 @@ textarea {
 .schedule-item-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 0.9rem;
+  gap: 1rem; /* more breathing room */
+  padding: 1rem; /* slightly larger */
   border-radius: 0.95rem;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: #fff;

@@ -9,36 +9,54 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
+  Share2,
+  Link2,
+  Star,
 } from 'lucide-react';
 import type { SchedulePlan } from '../../domain/entities/SchedulePlan';
-import { isPlanExpired } from '../../domain/entities/SchedulePlan';
+import { formatSchedulePlanDateTime, isPlanExpired } from '../../domain/entities/SchedulePlan';
 import { getCategoryText } from '../../domain/entities/Hymn';
 
 interface ScheduleScreenProps {
   plans: SchedulePlan[];
-  onAddPlan: (name: string, scheduledAt: string) => boolean;
+  onAddPlan: (name: string, scheduledAt: string, category: string) => boolean;
   onDeletePlan: (planId: string) => void;
+  onSetPrimaryPlan: (planId: string) => void;
   onClearExpiredPlans: () => void;
   onSelectHymn: (bookId: number, number: number) => void;
   onAddHymn: (planId: string, category: string, number: string) => Promise<boolean>;
   onRemoveHymn: (planId: string, itemId: string) => void;
   onMoveItem: (planId: string, itemId: string, direction: 'up' | 'down') => void;
+  onSharePlan: (planId: string) => Promise<boolean>;
+  getShareData: (planId: string) => { title: string; text: string; url: string } | null;
 }
 
 const CATEGORIES = ['詩歌', '補充', '新歌', '新詩', '藍本'];
+
+const DEFAULT_SCHEDULE_CATEGORIES = ['主日聚會', '活力排', '禱告聚會', '相調'];
+const SCHEDULE_CATEGORIES_KEY = 'schedule_categories';
+
+function loadScheduleCategories(): string[] {
+  try {
+    const raw = localStorage.getItem(SCHEDULE_CATEGORIES_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (Array.isArray(saved) && saved.every((category) => typeof category === 'string')) {
+        return [...new Set([...DEFAULT_SCHEDULE_CATEGORIES, ...saved.map((category) => category.trim()).filter(Boolean)])];
+      }
+    }
+  } catch {
+    // Use defaults if saved data is invalid.
+  }
+
+  localStorage.setItem(SCHEDULE_CATEGORIES_KEY, JSON.stringify(DEFAULT_SCHEDULE_CATEGORIES));
+  return DEFAULT_SCHEDULE_CATEGORIES;
+}
 
 function getDefaultDateTimeValue(): string {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
-}
-
-function formatScheduleDateTime(value: string): string {
-  const date = new Date(value);
-  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, '0')}`;
 }
 
 interface DeleteState {
@@ -51,17 +69,24 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
   plans,
   onAddPlan,
   onDeletePlan,
+  onSetPrimaryPlan,
   onClearExpiredPlans,
   onSelectHymn,
   onAddHymn,
   onRemoveHymn,
   onMoveItem,
+  onSharePlan,
+  getShareData,
 }) => {
   const [expandedPlanIds, setExpandedPlanIds] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deleteState, setDeleteState] = useState<DeleteState | null>(null);
+  const [exportPlanId, setExportPlanId] = useState<string | null>(null);
   const [planName, setPlanName] = useState('');
   const [scheduledAt, setScheduledAt] = useState(getDefaultDateTimeValue());
+  const [scheduleCategories, setScheduleCategories] = useState<string[]>(loadScheduleCategories);
+  const [planCategory, setPlanCategory] = useState(DEFAULT_SCHEDULE_CATEGORIES[0]);
+  const [selectedScheduleCategory, setSelectedScheduleCategory] = useState<string | null>(null);
   const [itemInputs, setItemInputs] = useState<Record<string, { category: string; number: string }>>({});
 
   const expiredCount = useMemo(
@@ -77,14 +102,35 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
     ));
   };
 
+  const handleAddScheduleCategory = () => {
+    const name = window.prompt('請輸入新類別名稱')?.trim();
+    if (!name) return;
+
+    if (scheduleCategories.includes(name)) {
+      setSelectedScheduleCategory(name);
+      return;
+    }
+
+    const next = [...scheduleCategories, name];
+    setScheduleCategories(next);
+    localStorage.setItem(SCHEDULE_CATEGORIES_KEY, JSON.stringify(next));
+    setPlanCategory(name);
+    setSelectedScheduleCategory(name);
+  };
+
+  const visiblePlans = selectedScheduleCategory
+    ? plans.filter((plan) => plan.category === selectedScheduleCategory)
+    : plans;
+
   const handleAddPlan = () => {
-    const created = onAddPlan(planName, scheduledAt);
+    const created = onAddPlan(planName, scheduledAt, planCategory);
     if (!created) {
       return;
     }
 
     setPlanName('');
     setScheduledAt(getDefaultDateTimeValue());
+    setPlanCategory(scheduleCategories[0] || DEFAULT_SCHEDULE_CATEGORIES[0]);
     setIsAddModalOpen(false);
   };
 
@@ -118,6 +164,15 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
     setDeleteState(null);
   };
 
+  const exportData = exportPlanId ? getShareData(exportPlanId) : null;
+
+  const handleNativeShare = async (planId: string) => {
+    const shared = await onSharePlan(planId);
+    if (!shared) {
+      setExportPlanId(planId);
+    }
+  };
+
   return (
     <div className="screen-root overflow-auto p-4 p-sm-4 pt-4 pt-sm-5">
       <div className="d-flex flex-column gap-4">
@@ -147,28 +202,39 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
           </div>
         </div>
 
-        {plans.length === 0 ? (
+        <div className="d-flex flex-wrap gap-2 align-items-center" aria-label="行程類別">
+          <button type="button" className={`btn btn-sm ${selectedScheduleCategory === null ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => setSelectedScheduleCategory(null)}>全部</button>
+          {scheduleCategories.map((category) => (
+            <button key={category} type="button" className={`btn btn-sm ${selectedScheduleCategory === category ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => setSelectedScheduleCategory(category)}>
+              {category}
+            </button>
+          ))}
+          <button type="button" className="btn btn-sm btn-outline-success" onClick={handleAddScheduleCategory}>+ 新增類別</button>
+        </div>
+
+        {visiblePlans.length === 0 ? (
           <div className="screen-panel p-4 text-center text-secondary">
             目前還沒有行程，按右上角新增行程就可以開始建立。
           </div>
         ) : (
           <div className="d-flex flex-column gap-3">
-            {plans.map((plan) => {
+            {visiblePlans.map((plan) => {
               const isExpanded = expandedPlanIds.includes(plan.id);
               const input = itemInputs[plan.id] || { category: CATEGORIES[0], number: '' };
 
               return (
                 <div key={plan.id} className="screen-panel overflow-hidden">
-                  <div className="d-flex align-items-center justify-content-between gap-3 p-3 border-bottom">
+                  <div className="p-3 border-bottom d-flex flex-column gap-3">
                     <button
                       type="button"
                       onClick={() => toggleExpanded(plan.id)}
                       className="schedule-plan-toggle text-start"
                     >
                       <div className="fw-semibold text-dark">{plan.name}</div>
+                      {plan.displayName && <div className="small text-secondary mt-1">{plan.displayName}</div>}
                       <div className="small text-secondary d-flex align-items-center gap-2 mt-1">
                         <Clock3 size={14} />
-                        {formatScheduleDateTime(plan.scheduledAt)}
+                        {formatSchedulePlanDateTime(plan.scheduledAt)}
                         <span>•</span>
                         <span>{plan.items.length} 首</span>
                         {isPlanExpired(plan) && (
@@ -180,11 +246,30 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                       </div>
                     </button>
 
-                    <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex flex-wrap align-items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleNativeShare(plan.id)}
+                        className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1"
+                        aria-label="分享行程"
+                        title="分享行程"
+                      >
+                        <Share2 size={16} />
+                        分享
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSetPrimaryPlan(plan.id)}
+                        className={`btn btn-sm d-inline-flex align-items-center gap-1 ${plan.isPrimary ? 'btn-warning' : 'btn-outline-secondary'}`}
+                        aria-label={plan.isPrimary ? '目前主行程' : '設為主行程'}
+                      >
+                        <Star size={16} fill={plan.isPrimary ? 'currentColor' : 'none'} />
+                        {plan.isPrimary ? '主行程' : '設為主行程'}
+                      </button>
                       <button
                         type="button"
                         onClick={() => toggleExpanded(plan.id)}
-                        className="schedule-icon-button"
+                        className="schedule-icon-button ms-auto"
                         aria-label={isExpanded ? '收合行程' : '展開行程'}
                       >
                         {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -192,10 +277,11 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                       <button
                         type="button"
                         onClick={() => setDeleteState({ type: 'plan', planId: plan.id, planName: plan.name })}
-                        className="schedule-icon-button schedule-icon-button--danger"
+                        className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
                         aria-label="刪除行程"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
+                        刪除
                       </button>
                     </div>
                   </div>
@@ -248,7 +334,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                                 onClick={() => onSelectHymn(item.bookId, item.number)}
                                 className="schedule-item-main"
                               >
-                                <div className="d-flex align-items-center gap-2">
+                                <div className="d-flex align-items-center gap-3">
                                   <Music4 size={16} className="text-success flex-shrink-0" />
                                   <span className="small fw-medium text-dark">
                                     ({getCategoryText(item.bookId)}){item.number} - {item.title}
@@ -256,7 +342,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                                 </div>
                               </button>
 
-                              <div className="d-flex align-items-center gap-1">
+                              <div className="d-flex align-items-center gap-2">
                                 <button
                                   type="button"
                                   className="schedule-icon-button"
@@ -314,16 +400,26 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
 
             <div className="d-flex flex-column gap-3">
               <input
-                type="text"
-                value={planName}
-                onChange={(e) => setPlanName(e.target.value)}
-                placeholder="例如：主日聚會、晚禱、青年聚會"
-                className="form-control"
-              />
-              <input
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
+                className="form-control"
+              />
+              <select
+                value={planCategory}
+                onChange={(e) => setPlanCategory(e.target.value)}
+                className="form-select"
+                aria-label="行程類別"
+              >
+                {scheduleCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={planName}
+                onChange={(e) => setPlanName(e.target.value)}
+                placeholder="行程名稱（非必填）"
                 className="form-control"
               />
             </div>
@@ -356,6 +452,53 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
               </button>
               <button type="button" className="btn btn-danger" onClick={confirmDelete}>
                 刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {exportData && (
+        <div className="overlay-modal-backdrop">
+          <div className="overlay-modal-card overlay-modal-card--wide">
+            <div className="d-flex align-items-center justify-content-between gap-3 mb-3">
+              <div>
+                <h3 className="h5 fw-bold text-dark mb-1">匯出行程</h3>
+                <p className="small text-secondary mb-0">這份內容已整理成適合貼到群組的格式，也附上可匯入連結。</p>
+              </div>
+              <button
+                type="button"
+                className="schedule-icon-button"
+                onClick={() => setExportPlanId(null)}
+                aria-label="關閉"
+              >
+                <ChevronDown size={18} />
+              </button>
+            </div>
+
+            <div className="schedule-export-block mb-3">
+              <div className="small fw-semibold text-dark mb-2">易讀內容</div>
+              <pre className="schedule-export-pre mb-0">{exportData.text}</pre>
+            </div>
+
+            <div className="schedule-export-block">
+              <div className="small fw-semibold text-dark mb-2 d-flex align-items-center gap-2">
+                <Link2 size={14} />
+                匯入連結
+              </div>
+              <div className="small text-break text-secondary">{exportData.url}</div>
+            </div>
+
+            <div className="d-flex flex-wrap justify-content-end gap-2 mt-4">
+              <button
+                type="button"
+                className="btn btn-success d-flex align-items-center gap-2"
+                onClick={() => {
+                  if (exportPlanId) void handleNativeShare(exportPlanId);
+                }}
+              >
+                <Share2 size={14} />
+                系統分享
               </button>
             </div>
           </div>

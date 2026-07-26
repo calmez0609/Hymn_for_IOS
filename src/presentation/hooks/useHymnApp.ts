@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Hymn } from '../../domain/entities/Hymn';
 import { CATEGORY_BOOK_MAP } from '../../domain/entities/Hymn';
 import type { HistoryRecord } from '../../domain/entities/HistoryRecord';
-import type { SchedulePlan } from '../../domain/entities/SchedulePlan';
-import { isPlanExpired } from '../../domain/entities/SchedulePlan';
+import type { SchedulePlan, SharedSchedulePlanPayload } from '../../domain/entities/SchedulePlan';
+import { formatSchedulePlanForShare, isPlanExpired } from '../../domain/entities/SchedulePlan';
 import type { Settings } from '../../domain/entities/Settings';
 import { HymnRepositoryImpl } from '../../data/repositories/HymnRepositoryImpl';
 import { HistoryRepositoryImpl } from '../../data/repositories/HistoryRepositoryImpl';
@@ -13,11 +13,65 @@ const hymnRepo = new HymnRepositoryImpl();
 const historyRepo = new HistoryRepositoryImpl();
 const storage = new LocalStorageDataSource();
 const PICKER_TAB_INDEX = 1;
+const IMPORT_HASH_KEY = 'schedule';
+
+function createUuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `uuid-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function createLocalId(prefix: 'plan' | 'item'): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeSchedulePlan(plan: SchedulePlan): SchedulePlan {
+  return {
+    ...plan,
+    id: plan.id || createLocalId('plan'),
+    uuid: plan.uuid || createUuid(),
+    items: (plan.items || []).map((item) => ({
+      ...item,
+      id: item.id || createLocalId('item'),
+    })),
+  };
+}
 
 function sortSchedulePlans(plans: SchedulePlan[]): SchedulePlan[] {
   return [...plans].sort(
     (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
   );
+}
+
+function encodeSharePayload(payload: SharedSchedulePlanPayload): string {
+  const json = JSON.stringify(payload);
+  const bytes = new TextEncoder().encode(json);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeSharePayload(encoded: string): SharedSchedulePlanPayload | null {
+  try {
+    const padded = encoded.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(encoded.length / 4) * 4, '=');
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json) as SharedSchedulePlanPayload;
+  } catch {
+    return null;
+  }
+}
+
+function createShareUrl(payload: SharedSchedulePlanPayload): string {
+  const url = new URL(window.location.href);
+  url.hash = `${IMPORT_HASH_KEY}=${encodeSharePayload(payload)}`;
+  return url.toString();
 }
 
 export interface ToastMessage {
@@ -34,7 +88,13 @@ export function useHymnApp() {
   );
   const [activeHymnTab, setActiveHymnTabState] = useState<number | null>(rememberedHymn?.sourceTab ?? null);
   const [historyRecords, setHistoryRecords] = useState<HistoryRecord[]>([]);
-  const [schedulePlans, setSchedulePlans] = useState<SchedulePlan[]>(sortSchedulePlans(storage.getSchedulePlans()));
+  const [schedulePlans, setSchedulePlans] = useState<SchedulePlan[]>(() => {
+    const normalizedPlans = sortSchedulePlans(storage.getSchedulePlans().map((plan) => normalizeSchedulePlan(plan)));
+    storage.saveSchedulePlans(normalizedPlans);
+    return normalizedPlans;
+  });
+  const [importedScheduleUuids, setImportedScheduleUuids] = useState<string[]>(storage.getImportedScheduleUuids());
+  const [pendingImportedPlan, setPendingImportedPlan] = useState<SchedulePlan | null>(null);
   const [settings, setSettings] = useState<Settings>(storage.getSettings());
   const [homeDraft, setHomeDraftState] = useState<string>(storage.getHomeDraft());
   const [dataSourceInfo, setDataSourceInfo] = useState<string>(hymnRepo.getLoadedSourceInfo());
@@ -87,6 +147,14 @@ export function useHymnApp() {
     setSchedulePlans((prev) => {
       const updated = sortSchedulePlans(updater(prev));
       storage.saveSchedulePlans(updated);
+      return updated;
+    });
+  }, []);
+
+  const addImportedScheduleUuid = useCallback((uuid: string) => {
+    setImportedScheduleUuids((prev) => {
+      const updated = prev.includes(uuid) ? prev : [...prev, uuid];
+      storage.saveImportedScheduleUuids(updated);
       return updated;
     });
   }, []);
@@ -184,10 +252,10 @@ export function useHymnApp() {
     showToast(`歷史紀錄已清除`, 'info');
   }, [refreshHistory, showToast]);
 
-  const addSchedulePlan = useCallback((name: string, scheduledAt: string) => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      showToast('請輸入行程名稱', 'error');
+  const addSchedulePlan = useCallback((displayName: string, scheduledAt: string, category?: string) => {
+    const trimmedCategory = category?.trim();
+    if (!trimmedCategory) {
+      showToast('請選擇行程類別', 'error');
       return false;
     }
 
@@ -199,9 +267,12 @@ export function useHymnApp() {
     updateSchedulePlansState((prev) => [
       ...prev,
       {
-        id: `plan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: trimmedName,
+        id: createLocalId('plan'),
+        uuid: createUuid(),
+        name: trimmedCategory,
+        displayName: displayName.trim() || undefined,
         scheduledAt,
+        category: trimmedCategory,
         items: [],
         createdAt: new Date().toISOString(),
       },
@@ -213,6 +284,14 @@ export function useHymnApp() {
   const deleteSchedulePlan = useCallback((planId: string) => {
     updateSchedulePlansState((prev) => prev.filter((plan) => plan.id !== planId));
     showToast('行程已刪除', 'info');
+  }, [showToast, updateSchedulePlansState]);
+
+  const setPrimarySchedulePlan = useCallback((planId: string) => {
+    updateSchedulePlansState((prev) => prev.map((plan) => ({
+      ...plan,
+      isPrimary: plan.id === planId,
+    })));
+    showToast('已設為主行程', 'success');
   }, [showToast, updateSchedulePlansState]);
 
   const clearExpiredSchedulePlans = useCallback(() => {
@@ -252,13 +331,43 @@ export function useHymnApp() {
         items: [
           ...plan.items,
           {
-            id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            id: createLocalId('item'),
             bookId: hymn.bookId,
             number: hymn.number,
             title: hymn.title,
           },
         ],
       };
+    }));
+
+    showToast('已加入行程', 'success');
+    return true;
+  }, [showToast, updateSchedulePlansState]);
+
+  const addExistingHymnToSchedulePlan = useCallback(async (planId: string, hymn: Hymn, selectedCategory?: string) => {
+    if (!hymn) {
+      showToast('找不到詩歌內容', 'error');
+      return false;
+    }
+
+    updateSchedulePlansState((prev) => prev.map((plan) => {
+      if (plan.id !== planId) return plan;
+      const nextPlan = {
+        ...plan,
+        items: [
+          ...plan.items,
+          {
+            id: createLocalId('item'),
+            bookId: hymn.bookId,
+            number: hymn.number,
+            title: hymn.title,
+          },
+        ],
+      };
+      if (selectedCategory) {
+        nextPlan.category = selectedCategory;
+      }
+      return nextPlan;
     }));
 
     showToast('已加入行程', 'success');
@@ -306,6 +415,142 @@ export function useHymnApp() {
     }));
   }, [updateSchedulePlansState]);
 
+  const getSchedulePlanShareData = useCallback((planId: string) => {
+    const plan = schedulePlans.find((item) => item.id === planId);
+    if (!plan) {
+      return null;
+    }
+
+    const payload: SharedSchedulePlanPayload = {
+      uuid: plan.uuid,
+      name: plan.name,
+      displayName: plan.displayName,
+      scheduledAt: plan.scheduledAt,
+      items: plan.items.map((item) => ({
+        bookId: item.bookId,
+        number: item.number,
+        title: item.title,
+      })),
+    };
+
+    const url = createShareUrl(payload);
+    const text = `${formatSchedulePlanForShare(plan)}\n\n匯入連結：${url}`;
+    return {
+      title: `行程分享：${plan.displayName || plan.name}`,
+      text,
+      url,
+    };
+  }, [schedulePlans]);
+
+  const shareSchedulePlan = useCallback(async (planId: string) => {
+    const shareData = getSchedulePlanShareData(planId);
+    if (!shareData) {
+      showToast('找不到要分享的行程', 'error');
+      return false;
+    }
+
+    if (!navigator.share) {
+      return false;
+    }
+
+    try {
+      const nativeShareData = {
+        title: shareData.title,
+        text: shareData.text,
+        url: shareData.url,
+      };
+
+      if (navigator.canShare && !navigator.canShare(nativeShareData)) {
+        return false;
+      }
+
+      await navigator.share(nativeShareData);
+      showToast('已開啟行程分享選單', 'info');
+      return true;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return true;
+      }
+
+      showToast('目前無法叫出系統分享，請改用匯出內容或分享連結', 'error');
+      return false;
+    }
+  }, [getSchedulePlanShareData, showToast]);
+
+  const dismissPendingImportedPlan = useCallback(() => {
+    setPendingImportedPlan(null);
+  }, []);
+
+  const confirmImportSharedPlan = useCallback(() => {
+    if (!pendingImportedPlan) {
+      return false;
+    }
+
+    const alreadyImported = importedScheduleUuids.includes(pendingImportedPlan.uuid)
+      || schedulePlans.some((plan) => plan.uuid === pendingImportedPlan.uuid);
+
+    if (alreadyImported) {
+      showToast('這個行程之前已經匯入過了', 'info');
+      setPendingImportedPlan(null);
+      setActiveTab(3);
+      return false;
+    }
+
+    updateSchedulePlansState((prev) => [
+      ...prev,
+      {
+        ...pendingImportedPlan,
+        id: createLocalId('plan'),
+        items: pendingImportedPlan.items.map((item) => ({
+          ...item,
+          id: createLocalId('item'),
+        })),
+      },
+    ]);
+    addImportedScheduleUuid(pendingImportedPlan.uuid);
+    setPendingImportedPlan(null);
+    setActiveTab(3);
+    showToast('行程已匯入', 'success');
+    return true;
+  }, [addImportedScheduleUuid, importedScheduleUuids, pendingImportedPlan, schedulePlans, showToast, updateSchedulePlansState]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const encodedPayload = params.get(IMPORT_HASH_KEY);
+    if (!encodedPayload) {
+      return;
+    }
+
+    const decodedPayload = decodeSharePayload(encodedPayload);
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+
+    if (!decodedPayload) {
+      showToast('分享連結格式不正確，無法匯入行程', 'error');
+      return;
+    }
+
+    const alreadyImported = importedScheduleUuids.includes(decodedPayload.uuid)
+      || schedulePlans.some((plan) => plan.uuid === decodedPayload.uuid);
+
+    if (alreadyImported) {
+      showToast('這個行程之前已經匯入過了', 'info');
+      return;
+    }
+
+    setPendingImportedPlan({
+      id: createLocalId('plan'),
+      uuid: decodedPayload.uuid,
+      name: decodedPayload.name,
+      displayName: decodedPayload.displayName,
+      scheduledAt: decodedPayload.scheduledAt,
+      createdAt: new Date().toISOString(),
+      items: decodedPayload.items.map((item) => ({
+        ...item,
+        id: createLocalId('item'),
+      })),
+    });
+  }, [importedScheduleUuids, schedulePlans, showToast]);
+
   return {
     activeTab,
     setActiveTab,
@@ -334,9 +579,16 @@ export function useHymnApp() {
     clearHistory,
     addSchedulePlan,
     deleteSchedulePlan,
+    setPrimarySchedulePlan,
     clearExpiredSchedulePlans,
     addHymnToSchedulePlan,
+    addExistingHymnToSchedulePlan,
     removeHymnFromSchedulePlan,
     moveSchedulePlanItem,
+    getSchedulePlanShareData,
+    shareSchedulePlan,
+    pendingImportedPlan,
+    dismissPendingImportedPlan,
+    confirmImportSharedPlan,
   };
 }
