@@ -15,8 +15,8 @@ export const HeaderTabBar: React.FC<HeaderTabBarProps> = ({ activeTab, onTabChan
   ];
 
   return (
-    <div className="w-full bg-[#009688] text-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] select-none shrink-0 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around h-14 sm:h-16 px-2">
+    <div className="bottom-tabbar w-100 flex-shrink-0 user-select-none">
+      <div className="bottom-tabbar__inner d-flex align-items-center justify-content-around px-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -24,12 +24,10 @@ export const HeaderTabBar: React.FC<HeaderTabBarProps> = ({ activeTab, onTabChan
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-all relative ${
-                isActive ? 'text-white font-semibold' : 'text-teal-100/70 hover:text-white'
-              }`}
+              className={`tab-btn d-flex flex-column align-items-center justify-content-center flex-fill h-100 position-relative ${isActive ? 'tab-btn--active' : ''}`}
             >
-              <Icon className={`w-5 h-5 sm:w-6 sm:h-6 mb-0.5 transition-transform ${isActive ? 'scale-110' : ''}`} />
-              <span className="text-[10px] sm:text-xs leading-none">{tab.label}</span>
+              <Icon className="tab-btn__icon mb-1" size={22} />
+              <span style={{ fontSize: '0.72rem', lineHeight: 1 }}>{tab.label}</span>
             </button>
           );
         })}

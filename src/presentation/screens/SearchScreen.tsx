@@ -37,20 +37,24 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onSearch, onSelectHy
   }, [query, searchByTitle, onSearch]);
 
   return (
-    <div className="w-full h-full flex flex-col p-4 bg-slate-50 overflow-hidden">
-      <div className="flex items-center gap-2 mb-4 shrink-0">
-        <div className="relative flex-1">
+    <div className="screen-root d-flex flex-column p-4 p-sm-4 pt-4 pt-sm-5 overflow-hidden">
+      <div className="d-flex flex-column gap-3 mb-4 flex-shrink-0">
+        <div className="position-relative flex-grow-1">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="尋找詩歌..."
-            className="w-full pl-3 pr-9 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-teal-500 text-sm text-slate-800 bg-white shadow-sm"
+            className="form-control pe-5"
           />
-          <SearchIcon className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <SearchIcon
+            size={16}
+            className="position-absolute text-secondary"
+            style={{ right: '0.9rem', top: '50%', transform: 'translateY(-50%)' }}
+          />
         </div>
 
-        <div className="relative bg-white border border-slate-300 rounded-lg shrink-0">
+        <div className="position-relative flex-shrink-0">
           <select
             value={searchByTitle ? 'Title' : 'Body'}
             onChange={(e) => {
@@ -58,26 +62,30 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onSearch, onSelectHy
               setQuery('');
               setResults([]);
             }}
-            className="appearance-none bg-transparent pl-3 pr-7 py-2.5 text-sm text-slate-700 focus:outline-none font-medium cursor-pointer"
+            className="search-select form-select pe-5"
           >
             <option value="Title">標題</option>
             <option value="Body">內容</option>
           </select>
-          <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <ChevronDown
+            size={16}
+            className="position-absolute text-secondary pe-none"
+            style={{ right: '0.85rem', top: '50%', transform: 'translateY(-50%)' }}
+          />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto divide-y divide-slate-100 bg-white rounded-xl shadow-sm border border-slate-200">
+      <div className="screen-panel flex-grow-1 overflow-auto">
         {isSearching && (
-          <div className="p-6 text-center text-slate-400 text-sm">搜尋中...</div>
+          <div className="p-4 text-center text-secondary small">搜尋中...</div>
         )}
 
         {!isSearching && query.trim() && results.length === 0 && (
-          <div className="p-6 text-center text-slate-400 text-sm">未找到符合的詩歌</div>
+          <div className="p-4 text-center text-secondary small">未找到符合的詩歌</div>
         )}
 
         {!isSearching && !query.trim() && (
-          <div className="p-6 text-center text-slate-400 text-sm">請輸入關鍵字進行搜尋</div>
+          <div className="p-4 text-center text-secondary small">請輸入關鍵字進行搜尋</div>
         )}
 
         {results.map((hymn) => {
@@ -86,13 +94,13 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onSearch, onSelectHy
             <button
               key={`${hymn.bookId}-${hymn.number}`}
               onClick={() => onSelectHymn(hymn)}
-              className="w-full text-left p-3.5 hover:bg-teal-50/50 active:bg-teal-100/60 transition-colors flex items-center justify-between"
+              className="result-item w-100 text-start px-3 py-3 border-bottom d-flex align-items-center justify-content-between"
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="bg-teal-100 text-teal-800 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
+              <div className="d-flex align-items-center gap-2 overflow-hidden">
+                <span className="result-badge badge rounded-pill text-nowrap px-3 py-2">
                   {categoryText} 第{hymn.number}首
                 </span>
-                <span className="text-sm font-medium text-slate-800 truncate">
+                <span className="small fw-medium text-dark text-truncate">
                   {hymn.title}
                 </span>
               </div>

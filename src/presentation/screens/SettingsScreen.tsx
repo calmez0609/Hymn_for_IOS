@@ -24,73 +24,75 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col p-4 bg-slate-50 overflow-y-auto space-y-4">
-      <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 pb-2 border-b border-slate-200">
-        <Sliders className="w-5 h-5 text-teal-600" />
-        設置 (Settings)
-      </h2>
+    <div className="screen-root overflow-auto p-4 p-sm-4 pt-4 pt-sm-5">
+      <div className="d-flex flex-column gap-4">
+        <h2 className="h4 fw-bold text-dark d-flex align-items-center gap-2 pb-2 border-bottom mb-0 flex-shrink-0">
+          <Sliders size={20} className="text-success" />
+          設置 (Settings)
+        </h2>
 
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-semibold text-slate-700">字體大小 (Font Size)</label>
-          <span className="text-sm font-medium text-teal-600 font-mono">{settings.fontSize}px</span>
-        </div>
-        <input
-          type="range"
-          min="12"
-          max="32"
-          step="1"
-          value={settings.fontSize}
-          onChange={(e) => onUpdateSettings({ fontSize: parseFloat(e.target.value) })}
-          className="w-full accent-teal-600 cursor-pointer"
-        />
+        <div className="screen-panel p-4 d-flex flex-column gap-3">
+          <div className="d-flex justify-content-between align-items-center gap-3">
+            <label className="form-label small fw-semibold text-secondary mb-0">字體大小 (Font Size)</label>
+            <span className="small fw-semibold text-success">{settings.fontSize}px</span>
+          </div>
+          <input
+            type="range"
+            min="12"
+            max="32"
+            step="1"
+            value={settings.fontSize}
+            onChange={(e) => onUpdateSettings({ fontSize: parseFloat(e.target.value) })}
+            className="form-range"
+          />
 
-        <div
-          className="p-3.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 transition-all text-center"
-          style={{ fontSize: `${settings.fontSize}px` }}
-        >
-          這是一段預覽文字。 This is sample text with the current settings.
-        </div>
-      </div>
-
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <div className="flex items-center gap-2">
-          <Database className="w-4 h-4 text-teal-600" />
-          <h3 className="text-sm font-semibold text-slate-800">資料來源 (.db 檔案管理)</h3>
-        </div>
-
-        <div className="text-xs bg-teal-50 border border-teal-200 text-teal-900 p-2.5 rounded-lg">
-          目前狀態：<span className="font-semibold">{dataSourceInfo}</span>
-        </div>
-
-        <div className="flex flex-col gap-2 pt-1">
-          <label className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2.5 px-4 rounded-lg text-xs text-center cursor-pointer shadow-sm transition-colors flex items-center justify-center gap-1.5">
-            <Database className="w-4 h-4" />
-            匯入 .db SQLite 資料庫檔案
-            <input
-              type="file"
-              accept=".db,.sqlite,.sqlite3"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </label>
-
-          <button
-            onClick={onResetDb}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-4 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 border border-slate-300"
+          <div
+            className="rounded-4 border bg-body-tertiary text-center px-3 py-3"
+            style={{ fontSize: `${settings.fontSize}px` }}
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            重置為內建資料庫 (hymn_data.json)
-          </button>
+            這是一段預覽文字。 This is sample text with the current settings.
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center space-y-1">
-        <p className="text-xs text-slate-500 font-medium">Version: 1.0.0 (100% Client-Side Static)</p>
-        <p className="text-xs text-slate-500 font-medium flex items-center justify-center gap-1">
-          <UserCheck className="w-3.5 h-3.5 text-teal-600" />
-          Author: Lenny(梁隆基)
-        </p>
+        <div className="screen-panel p-4 d-flex flex-column gap-3">
+          <div className="d-flex align-items-center gap-2">
+            <Database size={16} className="text-success" />
+            <h3 className="h6 fw-semibold text-dark mb-0">資料來源 (.db 檔案管理)</h3>
+          </div>
+
+          <div className="alert alert-success small mb-0 py-2 px-3">
+            目前狀態：<span className="fw-semibold">{dataSourceInfo}</span>
+          </div>
+
+          <div className="d-flex flex-column gap-2 pt-1">
+            <label className="btn btn-success d-flex align-items-center justify-content-center gap-2 py-2">
+              <Database size={16} />
+              匯入 .db SQLite 資料庫檔案
+              <input
+                type="file"
+                accept=".db,.sqlite,.sqlite3"
+                onChange={handleFileChange}
+                className="d-none"
+              />
+            </label>
+
+            <button
+              onClick={onResetDb}
+              className="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2"
+            >
+              <RotateCcw size={14} />
+              重置為內建資料庫 (hymn_data.json)
+            </button>
+          </div>
+        </div>
+
+        <div className="screen-panel p-4 text-center d-flex flex-column gap-1">
+          <p className="small text-secondary fw-medium mb-0">Version: 1.0.0 (100% Client-Side Static)</p>
+          <p className="small text-secondary fw-medium d-flex align-items-center justify-content-center gap-1 mb-0">
+            <UserCheck size={14} className="text-success" />
+            Author: Lenny(梁隆基)
+          </p>
+        </div>
       </div>
     </div>
   );

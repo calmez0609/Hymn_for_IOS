@@ -30,7 +30,6 @@ export const IosDeviceWrapper: React.FC<IosDeviceWrapperProps> = ({ children }) 
     return () => clearInterval(interval);
   }, []);
 
-  // Determine current active specs
   const getDeviceSpecs = () => {
     if (preset === 'iphone-x') {
       return { width: 375, height: 812, name: 'iPhone X / 10 (一般版)', type: 'notch' };
@@ -42,7 +41,6 @@ export const IosDeviceWrapper: React.FC<IosDeviceWrapperProps> = ({ children }) 
       return { width: 430, height: 932, name: 'iPhone 16 Pro Max (Pro Max 版)', type: 'island' };
     }
 
-    // Auto Detect based on window width
     if (windowWidth < 380) {
       return { width: '100%', height: '100%', name: 'Auto RWD - iPhone 10 (一般版)', type: 'notch' };
     } else if (windowWidth < 410) {
@@ -55,113 +53,102 @@ export const IosDeviceWrapper: React.FC<IosDeviceWrapperProps> = ({ children }) 
   const specs = getDeviceSpecs();
   const isFrameMode = preset !== 'auto';
 
-  // If on a real mobile device (width < 640) and preset is auto, just render full screen without fake frame
   if (windowWidth < 640 && preset === 'auto') {
     return (
-      <div className="w-full h-[100dvh] bg-slate-50 flex flex-col relative overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div className="device-mobile-shell">
         {children}
       </div>
     );
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-start p-2 sm:p-4">
-      {/* Top Device Switcher Control Toolbar */}
-      <div className="w-full max-w-xl mb-3 bg-slate-800/90 backdrop-blur-md rounded-2xl p-2.5 border border-slate-700 shadow-lg flex flex-wrap items-center justify-between gap-2 z-50">
-        <div className="flex items-center gap-2">
-          <Smartphone className="w-5 h-5 text-teal-400" />
-          <span className="text-xs font-semibold text-slate-200">
+    <div className="device-shell d-flex flex-column align-items-center justify-content-start p-2 p-sm-4">
+      <div className="device-toolbar rounded-4 p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div className="d-flex align-items-center gap-2">
+          <Smartphone size={20} className="text-info" />
+          <span className="small fw-semibold text-light">
             {specs.name}
           </span>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-700/60 w-full sm:w-auto overflow-x-auto hide-scrollbar">
+        <div
+          className="device-toggle-group hide-scrollbar rounded-4 p-1 d-flex align-items-center gap-1 flex-nowrap w-100 overflow-auto"
+          style={{ width: windowWidth >= 576 ? 'auto' : '100%' }}
+        >
           <button
             onClick={() => setPreset('auto')}
-            className={`whitespace-nowrap px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
-              preset === 'auto'
-                ? 'bg-teal-500 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className={`device-toggle-btn px-3 py-2 small fw-medium ${preset === 'auto' ? 'active' : ''}`}
             title="自動偵測裝置寬度 (Auto RWD)"
           >
-            <Monitor className="w-3.5 h-3.5 inline mr-1" />
+            <Monitor size={14} className="me-1 align-text-bottom" />
             自動偵測
           </button>
           <button
             onClick={() => setPreset('iphone-x')}
-            className={`whitespace-nowrap px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
-              preset === 'iphone-x'
-                ? 'bg-teal-500 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className={`device-toggle-btn px-3 py-2 small fw-medium ${preset === 'iphone-x' ? 'active' : ''}`}
           >
             一般版 (X)
           </button>
           <button
             onClick={() => setPreset('iphone-pro')}
-            className={`whitespace-nowrap px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
-              preset === 'iphone-pro'
-                ? 'bg-teal-500 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className={`device-toggle-btn px-3 py-2 small fw-medium ${preset === 'iphone-pro' ? 'active' : ''}`}
           >
             Pro 版
           </button>
           <button
             onClick={() => setPreset('iphone-promax')}
-            className={`whitespace-nowrap px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
-              preset === 'iphone-promax'
-                ? 'bg-teal-500 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className={`device-toggle-btn px-3 py-2 small fw-medium ${preset === 'iphone-promax' ? 'active' : ''}`}
           >
             Pro Max
           </button>
         </div>
       </div>
 
-      {/* Screen Frame Container */}
       <div
-        className={`relative transition-all duration-300 ${
+        className={`device-frame ${
           isFrameMode
-            ? 'border-[12px] border-slate-800 rounded-[50px] shadow-2xl overflow-hidden bg-white ring-1 ring-slate-700'
-            : 'w-full max-w-md h-[840px] max-h-[90vh] rounded-[40px] shadow-2xl overflow-hidden bg-white ring-1 ring-slate-800'
+            ? 'device-frame--fixed'
+            : 'device-frame--auto'
         }`}
         style={{
           width: isFrameMode ? `${specs.width}px` : undefined,
           height: isFrameMode ? `${specs.height}px` : undefined,
         }}
       >
-        {/* iOS Dynamic Island / Notch Cutout */}
         {specs.type === 'island' ? (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-7 bg-black rounded-full z-40 flex items-center justify-between px-2.5 shadow-md">
-            <div className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-slate-700" />
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-950/80 border border-emerald-800" />
+          <div className="device-cutout device-cutout--island d-flex align-items-center justify-content-between px-2 shadow">
+            <div
+              className="rounded-circle border border-secondary-subtle"
+              style={{ width: '0.625rem', height: '0.625rem', backgroundColor: '#0f172a' }}
+            />
+            <div
+              className="rounded-circle border"
+              style={{ width: '0.625rem', height: '0.625rem', backgroundColor: 'rgba(6, 78, 59, 0.85)', borderColor: '#14532d' }}
+            />
           </div>
         ) : (
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-2xl z-40 flex items-center justify-center">
-            <div className="w-12 h-1 bg-slate-800 rounded-full" />
+          <div className="device-cutout device-cutout--notch d-flex align-items-center justify-content-center">
+            <div
+              className="rounded-pill"
+              style={{ width: '3rem', height: '0.25rem', backgroundColor: '#1e293b' }}
+            />
           </div>
         )}
 
-        {/* iOS Status Bar */}
-        <div className="absolute top-0 left-0 right-0 h-11 px-6 pt-1 flex items-center justify-between z-30 pointer-events-none text-slate-800">
-          <span className="text-xs font-semibold tracking-tight">{timeStr || '9:41'}</span>
-          <div className="flex items-center gap-1.5 opacity-90">
-            <Radio className="w-3 h-3 text-slate-800" />
-            <Wifi className="w-3.5 h-3.5 text-slate-800" />
-            <Battery className="w-4 h-4 text-slate-800" />
+        <div className="device-statusbar d-flex align-items-start justify-content-between">
+          <span className="small fw-semibold">{timeStr || '9:41'}</span>
+          <div className="d-flex align-items-center gap-1 opacity-75">
+            <Radio size={12} />
+            <Wifi size={14} />
+            <Battery size={16} />
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="w-full h-full pt-14 pb-6 flex flex-col bg-slate-50 relative overflow-hidden">
+        <div className="device-content">
           {children}
         </div>
 
-        {/* iOS Home Bar Indicator */}
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-slate-400/60 rounded-full z-40 pointer-events-none" />
+        <div className="device-home-indicator" />
       </div>
     </div>
   );

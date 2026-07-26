@@ -18,10 +18,13 @@ export interface ToastMessage {
 }
 
 export function useHymnApp() {
+  const rememberedHymn = storage.getRememberedHymn();
   const [activeTab, setActiveTab] = useState<number>(0);
-  const [activeHymn, setActiveHymn] = useState<Hymn | null>(null);
+  const [activeHymn, setActiveHymnState] = useState<Hymn | null>(rememberedHymn?.sourceTab === 0 ? rememberedHymn.hymn : null);
+  const [activeHymnTab, setActiveHymnTabState] = useState<number | null>(rememberedHymn?.sourceTab ?? null);
   const [historyRecords, setHistoryRecords] = useState<HistoryRecord[]>([]);
   const [settings, setSettings] = useState<Settings>(storage.getSettings());
+  const [homeDraft, setHomeDraftState] = useState<string>(storage.getHomeDraft());
   const [dataSourceInfo, setDataSourceInfo] = useState<string>(hymnRepo.getLoadedSourceInfo());
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -59,11 +62,63 @@ export function useHymnApp() {
     setHistoryRecords(hist);
   }, []);
 
+  const setHomeDraft = useCallback((value: string) => {
+    setHomeDraftState(value);
+    storage.saveHomeDraft(value);
+  }, []);
+
+  const persistRememberedHymn = useCallback((nextRememberedHymn: { hymn: Hymn; sourceTab: number } | null) => {
+    storage.saveRememberedHymn(nextRememberedHymn);
+  }, []);
+
+  const setActiveHymn = useCallback((hymn: Hymn | null) => {
+    setActiveHymnState(hymn);
+  }, []);
+
+  const setActiveHymnTab = useCallback((tab: number | null) => {
+    setActiveHymnTabState(tab);
+  }, []);
+
+  const closeActiveHymn = useCallback((options?: { clearRemembered?: boolean }) => {
+    const shouldClearRemembered = options?.clearRemembered ?? activeHymnTab === 0;
+
+    setActiveHymnState(null);
+    setActiveHymnTabState(null);
+
+    if (shouldClearRemembered) {
+      persistRememberedHymn(null);
+    }
+  }, [activeHymnTab, persistRememberedHymn]);
+
+  const restoreRememberedHomeHymn = useCallback(() => {
+    const nextRememberedHymn = storage.getRememberedHymn();
+    if (!nextRememberedHymn || nextRememberedHymn.sourceTab !== 0) {
+      return;
+    }
+
+    setActiveHymnState(nextRememberedHymn.hymn);
+    setActiveHymnTabState(0);
+  }, []);
+
   const openHymn = useCallback(async (hymn: Hymn) => {
-    setActiveHymn(hymn);
+    setActiveHymnState(hymn);
+    setActiveHymnTabState(activeTab);
+    if (activeTab === 0) {
+      persistRememberedHymn({ hymn, sourceTab: 0 });
+    }
     await historyRepo.addHistory(hymn);
     await refreshHistory();
-  }, [refreshHistory]);
+  }, [activeTab, persistRememberedHymn, refreshHistory]);
+
+  const openHymnByNumber = useCallback(async (bookId: number, number: number): Promise<void> => {
+    const found = await hymnRepo.getHymnByNumber(bookId, number);
+    if (found) {
+      await openHymn(found);
+      return;
+    }
+
+    showToast(`找不到對應詩歌內容`, 'error');
+  }, [openHymn, showToast]);
 
   const findAndOpenHymn = useCallback(async (category: string, numberStr: string) => {
     const num = parseInt(numberStr, 10);
@@ -114,14 +169,21 @@ export function useHymnApp() {
     setActiveTab,
     activeHymn,
     setActiveHymn,
+    activeHymnTab,
+    setActiveHymnTab,
+    closeActiveHymn,
+    restoreRememberedHomeHymn,
     historyRecords,
     settings,
     updateSettings,
+    homeDraft,
+    setHomeDraft,
     dataSourceInfo,
     isInitializing,
     toasts,
     showToast,
     openHymn,
+    openHymnByNumber,
     findAndOpenHymn,
     searchHymns,
     importSqliteDb,

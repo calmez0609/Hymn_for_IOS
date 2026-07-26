@@ -1,8 +1,16 @@
 import type { HistoryRecord } from '../../domain/entities/HistoryRecord';
+import type { Hymn } from '../../domain/entities/Hymn';
 import type { Settings } from '../../domain/entities/Settings';
 
 const HISTORY_KEY = 'hymn_history_records';
 const SETTINGS_KEY = 'hymn_app_settings';
+const HOME_DRAFT_KEY = 'hymn_home_draft';
+const HOME_ACTIVE_HYMN_KEY = 'hymn_home_active_hymn';
+
+export interface RememberedHymnState {
+  hymn: Hymn;
+  sourceTab: number;
+}
 
 export class LocalStorageDataSource {
   getHistory(): HistoryRecord[] {
@@ -47,6 +55,44 @@ export class LocalStorageDataSource {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     } catch (e) {
       console.error('Failed to save settings:', e);
+    }
+  }
+
+  getHomeDraft(): string {
+    try {
+      return localStorage.getItem(HOME_DRAFT_KEY) || '詩歌-';
+    } catch {
+      return '詩歌-';
+    }
+  }
+
+  saveHomeDraft(value: string): void {
+    try {
+      localStorage.setItem(HOME_DRAFT_KEY, value);
+    } catch (e) {
+      console.error('Failed to save home draft:', e);
+    }
+  }
+
+  getRememberedHymn(): RememberedHymnState | null {
+    try {
+      const data = localStorage.getItem(HOME_ACTIVE_HYMN_KEY);
+      return data ? JSON.parse(data) as RememberedHymnState : null;
+    } catch {
+      return null;
+    }
+  }
+
+  saveRememberedHymn(value: RememberedHymnState | null): void {
+    try {
+      if (value) {
+        localStorage.setItem(HOME_ACTIVE_HYMN_KEY, JSON.stringify(value));
+        return;
+      }
+
+      localStorage.removeItem(HOME_ACTIVE_HYMN_KEY);
+    } catch (e) {
+      console.error('Failed to save remembered hymn:', e);
     }
   }
 }
