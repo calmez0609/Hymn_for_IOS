@@ -335,6 +335,123 @@ textarea {
   color: var(--primary-teal-dark);
 }
 
+.dashboard-badge {
+  font-size: 0.78rem;
+}
+
+.dashboard-hymn-button,
+.dashboard-hymn-chip {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #fff;
+  border-radius: 0.9rem;
+}
+
+.dashboard-hymn-button {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-hymn-button:hover,
+.dashboard-hymn-button:focus-visible,
+.dashboard-hymn-chip:hover,
+.dashboard-hymn-chip:focus-visible {
+  background: rgba(0, 150, 136, 0.08);
+  border-color: rgba(0, 150, 136, 0.28);
+}
+
+.dashboard-hymn-chip {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.schedule-plan-toggle {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.schedule-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 9rem) auto;
+  gap: 0.75rem;
+}
+
+.schedule-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: #fff;
+}
+
+.schedule-item-main {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.schedule-icon-button {
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.schedule-icon-button:hover,
+.schedule-icon-button:focus-visible {
+  background: rgba(0, 150, 136, 0.08);
+  color: var(--primary-teal-dark);
+  border-color: rgba(0, 150, 136, 0.24);
+}
+
+.schedule-icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.schedule-icon-button--danger:hover,
+.schedule-icon-button--danger:focus-visible {
+  background: rgba(220, 53, 69, 0.08);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.28);
+}
+
+.overlay-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  backdrop-filter: blur(4px);
+}
+
+.overlay-modal-card {
+  width: min(100%, 26rem);
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 1rem 3rem rgba(15, 23, 42, 0.22);
+}
+
 .hymn-modal {
   position: absolute;
   inset: 0;
@@ -464,6 +581,12 @@ textarea {
 
 .bottom-tabbar__inner {
   min-height: 3.75rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.bottom-tabbar__inner::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
@@ -471,6 +594,8 @@ textarea {
   background: transparent;
   color: rgba(255, 255, 255, 0.72);
   transition: all 0.2s ease;
+  min-width: 4.35rem;
+  padding: 0.35rem 0.2rem;
 }
 
 .tab-btn:hover,
@@ -526,6 +651,18 @@ textarea {
 
   .keypad-grid {
     gap: 0.85rem 1rem;
+  }
+
+  .schedule-add-row {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-item-row {
+    align-items: flex-start;
+  }
+
+  .dashboard-badge {
+    font-size: 0.74rem;
   }
 
   .device-toolbar {

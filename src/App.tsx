@@ -1,12 +1,20 @@
 import { useHymnApp } from './presentation/hooks/useHymnApp';
 import { IosDeviceWrapper } from './presentation/components/IosDeviceWrapper';
 import { HeaderTabBar } from './presentation/components/HeaderTabBar';
+import { DashboardScreen } from './presentation/screens/DashboardScreen';
 import { HomeScreen } from './presentation/screens/HomeScreen';
 import { SearchScreen } from './presentation/screens/SearchScreen';
+import { ScheduleScreen } from './presentation/screens/ScheduleScreen';
 import { HistoryScreen } from './presentation/screens/HistoryScreen';
 import { SettingsScreen } from './presentation/screens/SettingsScreen';
 import { HymnDetailModal } from './presentation/components/HymnDetailModal';
 import { getCategoryText } from './domain/entities/Hymn';
+
+const PICKER_TAB_INDEX = 1;
+const SEARCH_TAB_INDEX = 2;
+const SCHEDULE_TAB_INDEX = 3;
+const HISTORY_TAB_INDEX = 4;
+const SETTINGS_TAB_INDEX = 5;
 
 export function App() {
   const {
@@ -15,8 +23,9 @@ export function App() {
     activeHymn,
     activeHymnTab,
     closeActiveHymn,
-    restoreRememberedHomeHymn,
+    restoreRememberedPickerHymn,
     historyRecords,
+    schedulePlans,
     settings,
     updateSettings,
     homeDraft,
@@ -32,6 +41,12 @@ export function App() {
     importSqliteDb,
     resetToDefaultJson,
     clearHistory,
+    addSchedulePlan,
+    deleteSchedulePlan,
+    clearExpiredSchedulePlans,
+    addHymnToSchedulePlan,
+    removeHymnFromSchedulePlan,
+    moveSchedulePlanItem,
   } = useHymnApp();
 
   const handleShareHymn = async () => {
@@ -72,13 +87,13 @@ export function App() {
   const handleTabChange = (index: number) => {
     setActiveTab(index);
 
-    if (index === 0) {
-      if (activeHymn && activeHymnTab !== 0) {
+    if (index === PICKER_TAB_INDEX) {
+      if (activeHymn && activeHymnTab !== PICKER_TAB_INDEX) {
         closeActiveHymn({ clearRemembered: false });
       }
 
-      if (!activeHymn || activeHymnTab !== 0) {
-        restoreRememberedHomeHymn();
+      if (!activeHymn || activeHymnTab !== PICKER_TAB_INDEX) {
+        restoreRememberedPickerHymn();
       }
       return;
     }
@@ -86,6 +101,10 @@ export function App() {
     if (activeHymn) {
       closeActiveHymn({ clearRemembered: false });
     }
+  };
+
+  const openTab = (index: number) => {
+    handleTabChange(index);
   };
 
   return (
@@ -122,26 +141,50 @@ export function App() {
 
       <div className="app-shell">
         {activeTab === 0 && (
+          <DashboardScreen
+            plans={schedulePlans}
+            onOpenPicker={() => openTab(PICKER_TAB_INDEX)}
+            onOpenSchedules={() => openTab(SCHEDULE_TAB_INDEX)}
+            onSelectHymn={(bookId, number) => {
+              void openHymnByNumber(bookId, number);
+            }}
+          />
+        )}
+        {activeTab === PICKER_TAB_INDEX && (
           <HomeScreen
             input={homeDraft}
             onInputChange={setHomeDraft}
             onConfirm={(category, number) => findAndOpenHymn(category, number)}
           />
         )}
-        {activeTab === 1 && (
+        {activeTab === SEARCH_TAB_INDEX && (
           <SearchScreen
             onSearch={searchHymns}
             onSelectHymn={openHymn}
           />
         )}
-        {activeTab === 2 && (
+        {activeTab === SCHEDULE_TAB_INDEX && (
+          <ScheduleScreen
+            plans={schedulePlans}
+            onAddPlan={addSchedulePlan}
+            onDeletePlan={deleteSchedulePlan}
+            onClearExpiredPlans={clearExpiredSchedulePlans}
+            onSelectHymn={(bookId, number) => {
+              void openHymnByNumber(bookId, number);
+            }}
+            onAddHymn={addHymnToSchedulePlan}
+            onRemoveHymn={removeHymnFromSchedulePlan}
+            onMoveItem={moveSchedulePlanItem}
+          />
+        )}
+        {activeTab === HISTORY_TAB_INDEX && (
           <HistoryScreen
             records={historyRecords}
             onSelectHymn={openHymnByNumber}
             onClearHistory={clearHistory}
           />
         )}
-        {activeTab === 3 && (
+        {activeTab === SETTINGS_TAB_INDEX && (
           <SettingsScreen
             settings={settings}
             onUpdateSettings={updateSettings}

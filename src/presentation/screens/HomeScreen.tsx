@@ -36,6 +36,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ input, onInputChange, on
   return (
     <div className="screen-root overflow-auto position-relative">
       <div className="mobile-page mx-auto d-flex flex-column px-4 px-sm-4 pt-3 pb-4">
+        <div className="text-center pb-3">
+          <h2 className="h4 fw-bold text-dark mb-1">點歌</h2>
+          <p className="small text-secondary mb-0">選擇類別後輸入詩歌編號</p>
+        </div>
+
         <div className="w-100 text-center pb-4 flex-shrink-0">
           <div className="home-display d-flex align-items-center justify-content-center">
             {input || ' '}

@@ -1,11 +1,13 @@
 import type { HistoryRecord } from '../../domain/entities/HistoryRecord';
 import type { Hymn } from '../../domain/entities/Hymn';
+import type { SchedulePlan } from '../../domain/entities/SchedulePlan';
 import type { Settings } from '../../domain/entities/Settings';
 
 const HISTORY_KEY = 'hymn_history_records';
 const SETTINGS_KEY = 'hymn_app_settings';
 const HOME_DRAFT_KEY = 'hymn_home_draft';
 const HOME_ACTIVE_HYMN_KEY = 'hymn_home_active_hymn';
+const SCHEDULE_PLANS_KEY = 'hymn_schedule_plans';
 
 export interface RememberedHymnState {
   hymn: Hymn;
@@ -93,6 +95,23 @@ export class LocalStorageDataSource {
       localStorage.removeItem(HOME_ACTIVE_HYMN_KEY);
     } catch (e) {
       console.error('Failed to save remembered hymn:', e);
+    }
+  }
+
+  getSchedulePlans(): SchedulePlan[] {
+    try {
+      const data = localStorage.getItem(SCHEDULE_PLANS_KEY);
+      return data ? JSON.parse(data) as SchedulePlan[] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveSchedulePlans(plans: SchedulePlan[]): void {
+    try {
+      localStorage.setItem(SCHEDULE_PLANS_KEY, JSON.stringify(plans));
+    } catch (e) {
+      console.error('Failed to save schedule plans:', e);
     }
   }
 }

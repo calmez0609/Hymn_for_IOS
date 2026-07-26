@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, History, Settings } from 'lucide-react';
+import { CalendarDays, History, House, Music4, Search, Settings } from 'lucide-react';
 
 interface HeaderTabBarProps {
   activeTab: number;
@@ -8,10 +8,12 @@ interface HeaderTabBarProps {
 
 export const HeaderTabBar: React.FC<HeaderTabBarProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
-    { id: 0, label: '主頁', icon: Home },
-    { id: 1, label: '搜尋', icon: Search },
-    { id: 2, label: '歷史紀錄', icon: History },
-    { id: 3, label: '設置', icon: Settings },
+    { id: 0, label: '主頁', icon: House },
+    { id: 1, label: '點歌', icon: Music4 },
+    { id: 2, label: '搜尋', icon: Search },
+    { id: 3, label: '行程', icon: CalendarDays },
+    { id: 4, label: '歷史', icon: History },
+    { id: 5, label: '設置', icon: Settings },
   ];
 
   return (
